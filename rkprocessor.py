@@ -8,19 +8,18 @@ Assumptions:
 4. Dates can be parsed with the strftime format '%Y-%m-%d %H:%M:%S'
 5. Distance is measured in kilometers
 
-These assumptions depend on user settings in the RunKeeper app
+These assumptions depend on user settings and other pecularities of the RunKeeper app
 
 Non-assumptions:
 
 1. Rows are NOT assumed to be in chronological order
-2. NO key ordering assumed (actually, I think CSVReader guarantees this)
 """
 __license__ = "poetic"
 
-from csv import DictReader
 from sys import stdin
 from datetime import datetime
 from argparse import ArgumentParser
+from quickcsv import QuickCSV
 
 strptime = datetime.strptime
 now = datetime.now
@@ -59,13 +58,14 @@ class RKProcessor():
 		self.end_timestamp = end_timestamp
 
 	def __str__(self):
-		str_list = []
-
 		if self.total_activities:
+			str_list = []
 			first_date = fromtimestamp(self.first_activity)
 			last_date = fromtimestamp(self.last_activity)
 			str_list.append('{} - {}'.format(first_date, last_date))
 			str_list.append('activities: {}'.format(self.total_activities))
+		else:
+			return 'no activities'
 
 		if self.total_duration and self.total_distance:
 			km = int(self.total_distance // 1000)
@@ -88,62 +88,34 @@ class RKProcessor():
 	def warn(self, what, row):
 		self.warnings.append('{} (row: {})'.format(what, row))
 
-	# XXX - this is kinda broken :(
-	# The process function does not assume that all the OrderedDicts have the same keys
-	# in the same order (which of course they do)
-	# Performance could be gained by precalculating the indexes for the columns I need
-	# and then just access the per row column values as row_values[index_k]
-	# No need for all that lower() and startswith() on all keys...
+	def process(self, csvreader):
+		csvreader.setup_speed_dials([ 'date', 'duration', 'distance' ])
 
-	def process_key_value(self, key, value, extracted):
-		lk = key.lower()
+		for column_date, column_duration, column_distance in csvreader:
 
-		if lk.startswith('date'):
-			try:
-				timestamp = strptime(value, '%Y-%m-%d %H:%M:%S').timestamp()
-				extracted['timestamp'] = timestamp
-			except ValueError:
-				self.warn('date {} looks funny'.format(value), row)
-		elif lk.startswith('duration'):
-			t_l = [0]*3 + value.split(':')
-			t_l = t_l[-3:]
-			t_h, t_m, t_s = int(t_l[0]), int(t_l[1]), int(t_l[2])
-			duration = 3600 * int(t_h) + 60 * int(t_m) + int(t_s)
-			extracted['duration'] = duration
-		elif lk.startswith('distance'):
-			distance = int(1000 * float(value))
-			extracted['distance'] = distance
+			timestamp = strptime(column_date, '%Y-%m-%d %H:%M:%S').timestamp()
 
-	def process(self, rkreader):
-		for row in rkreader:
-			extracted = { }
+			if timestamp >= self.start_timestamp and timestamp <= self.end_timestamp:
+				t_l = [0]*3 + column_duration.split(':')
+				t_l = t_l[-3:]
+				t_h, t_m, t_s = int(t_l[0]), int(t_l[1]), int(t_l[2])
+				duration = 3600 * int(t_h) + 60 * int(t_m) + int(t_s)
+				if not duration:
+					self.warn('time is zero', row)
+				else:
+					self.total_duration += duration
 
-			self.skip_row = True
-			for key, value in row.items():
-				self.process_key_value(key, value, extracted)
-			try:
-				timestamp = extracted['timestamp']
-				duration = extracted['duration']
-				distance = extracted['distance']
-			except IndexError:
-				self.warn('ignored broken',row)
-			else:
-				if timestamp >= self.start_timestamp and timestamp <= self.end_timestamp:
-					if not duration:
-						self.warn('time is zero', row)
-					else:
-						self.total_duration += duration
+				distance = int(1000 * float(column_distance))
+				if not distance:
+					self.warn('distance is zero', row)
+				else:
+					self.total_distance += distance
 
-					if not distance:
-						self.warn('distance is zero', row)
-					else:
-						self.total_distance += distance
-
-					self.total_activities += 1
-					if not self.first_activity or timestamp < self.first_activity:
-						self.first_activity = timestamp
-					if not self.last_activity or timestamp > self.last_activity:
-						self.last_activity = timestamp
+				self.total_activities += 1
+				if not self.first_activity or timestamp < self.first_activity:
+					self.first_activity = timestamp
+				if not self.last_activity or timestamp > self.last_activity:
+					self.last_activity = timestamp
 
 if __name__ == '__main__':
 	args = parse_args()
@@ -159,16 +131,14 @@ if __name__ == '__main__':
 		end_timestamp = now().timestamp()
 
 	if args.from_stdin:
-		rkfile = stdin
+		rkfilename = '-'
 	else:
-		rkfile = open(args.filename, 'r')
+		rkfilename = args.filename
 
-	rkprocessor = RKProcessor(start_timestamp, end_timestamp)
-
-	rkreader = DictReader(rkfile)
-	rkprocessor.process(rkreader)
-
-	if rkfile != stdin:
-		rkfile.close()
-
-	print(rkprocessor)
+	with QuickCSV(rkfilename) as rkreader:
+		#column_rename = { 'Date': 'date', 'Duration': 'duration', 'Distance (km)': 'distance' }
+		#csvreader.setup_speed_dials([ 'zate', 'duration', 'distance' ], column_rename)
+		rkreader.setup_speed_dials([ 'date', 'duration', 'distance' ])
+		rkprocessor = RKProcessor(start_timestamp, end_timestamp)
+		rkprocessor.process(rkreader)
+		print(rkprocessor)
