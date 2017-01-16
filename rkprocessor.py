@@ -39,7 +39,7 @@ def parse_date(date_spec):
 
 def parse_args():
 	arg_parser = ArgumentParser()
-	arg_parser.add_argument('-', action='store_true', dest='from_stdin', help='take paths from stdin')
+	arg_parser.add_argument('-', action='store_true', dest='from_stdin', help='read from stdin')
 	arg_parser.add_argument('-f', '--filename', default='', help='name of export file')
 	arg_parser.add_argument('-s', '--start', default=None, help='start date')
 	arg_parser.add_argument('-e', '--end', default=None, help='end date')
@@ -92,16 +92,14 @@ class RKProcessor():
 		csvreader.setup_speed_dials([ 'date', 'duration', 'distance' ])
 
 		for column_date, column_duration, column_distance in csvreader:
-
 			timestamp = strptime(column_date, '%Y-%m-%d %H:%M:%S').timestamp()
-
 			if timestamp >= self.start_timestamp and timestamp <= self.end_timestamp:
 				t_l = [0]*3 + column_duration.split(':')
 				t_l = t_l[-3:]
 				t_h, t_m, t_s = int(t_l[0]), int(t_l[1]), int(t_l[2])
 				duration = 3600 * int(t_h) + 60 * int(t_m) + int(t_s)
 				if not duration:
-					self.warn('time is zero', row)
+					self.warn('duration is zero', row)
 				else:
 					self.total_duration += duration
 
