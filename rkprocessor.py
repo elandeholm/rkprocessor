@@ -126,7 +126,7 @@ class RKProcessor():
 				duration = extracted['duration']
 				distance = extracted['distance']
 			except IndexError:
-				self.warn('ignored broken row {}'.format(row))
+				self.warn('ignored broken',row)
 			else:
 				if timestamp >= self.start_timestamp and timestamp <= self.end_timestamp:
 					if not duration:
