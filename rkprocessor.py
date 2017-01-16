@@ -76,9 +76,9 @@ class RKProcessor():
 			s = int(self.total_duration % 60)
 			str_list.append('duration: {}:{:02}:{:02}'.format(h, m, s))
 			pace = int((self.total_duration) / (self.total_distance / 1000))
-			str_list.append('average pace: {}:{:02d} min/km'.format(pace // 60, pace % 60))
+			str_list.append('average pace: {}:{:02} min/km'.format(pace // 60, pace % 60))
 			speed = (self.total_distance / 1000) / (self.total_duration / 3600)
-			str_list.append('average speed: {}.{:02d} km/h'.format(int(speed), int(100 * (speed % 1.0))))
+			str_list.append('average speed: {}.{:02} km/h'.format(int(speed), int(100 * (speed % 1.0))))
 
 		if len(self.warnings):
 			str_list.append('warnings: {}'.format(self.warnings, ' '.join(self.warnings)))
