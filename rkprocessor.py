@@ -136,9 +136,6 @@ if __name__ == '__main__':
 		rkfilename = args.filename
 
 	with QuickCSV(rkfilename) as rkreader:
-		#column_rename = { 'Date': 'date', 'Duration': 'duration', 'Distance (km)': 'distance' }
-		#csvreader.setup_speed_dials([ 'zate', 'duration', 'distance' ], column_rename)
-		rkreader.setup_speed_dials([ 'date', 'duration', 'distance' ])
 		rkprocessor = RKProcessor(start_timestamp, end_timestamp)
 		rkprocessor.process(rkreader)
 		print(rkprocessor)
