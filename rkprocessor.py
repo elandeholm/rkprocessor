@@ -34,8 +34,9 @@ class RKProcessor():
 		self.end_timestamp = end_timestamp
 
 	def __str__(self):
+		str_list = []
+
 		if self.total_activities:
-			str_list = []
 			first_date = fromtimestamp(self.first_activity)
 			last_date = fromtimestamp(self.last_activity)
 			str_list.append('{} - {}'.format(first_date, last_date))
