@@ -21,30 +21,6 @@ from datetime import datetime
 from argparse import ArgumentParser
 from quickcsv import QuickCSV
 
-strptime = datetime.strptime
-now = datetime.now
-fromtimestamp = datetime.fromtimestamp
-
-def parse_date(date_spec):
-	date_formats = [ '%Y-%m-%d %H:%M:%S', '%Y-%m-%d', '%Y-%m', '%Y' ]
-
-	for df in date_formats:
-		try:
-			date = strptime(date_spec, df)
-			return date.timestamp()
-		except ValueError:
-			pass
-
-	raise ValueError('unrecognized date format: {}'.format(date_spec))
-
-def parse_args():
-	arg_parser = ArgumentParser()
-	arg_parser.add_argument('-', action='store_true', dest='from_stdin', help='read from stdin')
-	arg_parser.add_argument('-f', '--filename', default='', help='name of export file')
-	arg_parser.add_argument('-s', '--start', default=None, help='start date')
-	arg_parser.add_argument('-e', '--end', default=None, help='end date')
-	return arg_parser.parse_args()
-
 class RKProcessor():
 	def __init__(self, start_timestamp, end_timestamp):
 		self.first_activity = None
@@ -115,25 +91,59 @@ class RKProcessor():
 				if not self.last_activity or timestamp > self.last_activity:
 					self.last_activity = timestamp
 
+strptime = datetime.strptime
+now = datetime.now
+fromtimestamp = datetime.fromtimestamp
+
+class Args():
+	def __init__(self, args=None):
+		self.args_override = args
+
+		self.arg_parser = ArgumentParser(description='Python script for processing RunKeeper export files (cardioActivities.csv)')
+		self.arg_parser.add_argument('-', action='store_true', dest='from_stdin', help='read from stdin')
+		self.arg_parser.add_argument('-f', '--filename', default='', help='name of export file')
+		self.arg_parser.add_argument('-s', '--start', default=None, help='start date')
+		self.arg_parser.add_argument('-e', '--end', default=None, help='end date')
+
+	def _parse_date(self, date_spec):
+		date_formats = [ '%Y-%m-%d %H:%M:%S', '%Y-%m-%d', '%Y-%m', '%Y' ]
+
+		for df in date_formats:
+			try:
+				date = strptime(date_spec, df)
+				return date.timestamp()
+			except ValueError:
+				pass
+
+		raise ValueError('unrecognized date format: {}'.format(date_spec))
+
+	def get(self):
+		if self.args_override is not None:
+			parsed_args = self.arg_parser.parse_args(self.args_override)
+		else:
+			parsed_args = self.arg_parser.parse_args()
+
+		if parsed_args.from_stdin:
+			filename = '-'
+		else:
+			filename = parsed_args.filename
+
+		if parsed_args.start:
+			start_timestamp = self._parse_date(parsed_args.start)
+		else:
+			start_timestamp = 0
+
+		if parsed_args.end:
+			end_timestamp = self._parse_date(parsed_args.end)
+		else:
+			end_timestamp = now().timestamp()
+
+		return filename, start_timestamp, end_timestamp
+
 if __name__ == '__main__':
-	args = parse_args()
+	filename, start_timestamp, end_timestamp = Args().get()
 
-	if args.start:
-		start_timestamp = parse_date(args.start)
-	else:
-		start_timestamp = 0
-
-	if args.end:
-		end_timestamp = parse_date(args.end)
-	else:
-		end_timestamp = now().timestamp()
-
-	if args.from_stdin:
-		rkfilename = '-'
-	else:
-		rkfilename = args.filename
-
-	with QuickCSV(rkfilename) as rkreader:
+	with QuickCSV(filename) as rkreader:
 		rkprocessor = RKProcessor(start_timestamp, end_timestamp)
 		rkprocessor.process(rkreader)
 		print(rkprocessor)
