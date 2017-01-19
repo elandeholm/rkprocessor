@@ -21,6 +21,10 @@ from datetime import datetime
 from argparse import ArgumentParser
 from quickcsv import QuickCSV
 
+strptime = datetime.strptime
+now = datetime.now
+fromtimestamp = datetime.fromtimestamp
+
 class RKProcessor():
 	def __init__(self, start_timestamp, end_timestamp):
 		self.first_activity = None
@@ -91,10 +95,6 @@ class RKProcessor():
 					self.first_activity = timestamp
 				if not self.last_activity or timestamp > self.last_activity:
 					self.last_activity = timestamp
-
-strptime = datetime.strptime
-now = datetime.now
-fromtimestamp = datetime.fromtimestamp
 
 class Args():
 	def __init__(self, args=None):
