@@ -73,7 +73,7 @@ class RKProcessor():
 				t_l = [0]*3 + column_duration.split(':')
 				t_l = t_l[-3:]
 				t_h, t_m, t_s = int(t_l[0]), int(t_l[1]), int(t_l[2])
-				duration = 3600 * int(t_h) + 60 * int(t_m) + int(t_s)
+				duration = 3600 * t_h + 60 * t_m + t_s
 				if not duration:
 					self.warn('duration is zero', row)
 				else:
