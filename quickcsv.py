@@ -50,6 +50,9 @@ class QuickCSV():
 		elif self.filename:
 			self.file_obj = open(self.filename, 'r')
 
+		if not self.file_obj:
+			raise ValueError('no valid file/object given')
+
 		self.csvreader = csv.reader(self.file_obj)
 		self.readeriter = iter(self.csvreader)
 
